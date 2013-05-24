@@ -90,8 +90,6 @@ void extract_effect_strings(string action_string, vector<string>& adds, vector<s
 	// Find "end_pos": the end parenthesis in ":effect (and...)"
 	size_t end_pos = action_string.find_last_of(CLOSE);	// NOTE: "action_string" must not have close parenthesis for ":action"
 
-//	cout<<"=> Effect:"<<action_string.substr(begin_pos, end_pos - begin_pos)<<endl;
-
 	string not_str(NOT_STR);
 	size_t open_pos = begin_pos;
 	while (open_pos < end_pos) {
@@ -101,12 +99,30 @@ void extract_effect_strings(string action_string, vector<string>& adds, vector<s
 		if (open_pos == string::npos || open_pos >= end_pos)
 			break;
 
-		// Check if this is an add or delete effect
+		// Find the position of "not", if any
 		size_t not_pos = action_string.find(not_str, open_pos);
-		if (not_pos == string::npos) {
 
-			// Find the position AFTER the ")" for this ADD effect
-			size_t close_pos = action_string.find_first_of(CLOSE, open_pos);
+		// Find the position of ")" after the above "("
+		size_t close_pos = action_string.find_first_of(CLOSE, open_pos);
+
+		// Check if this is an add or delete effect
+		if (not_pos != string::npos && not_pos < close_pos) {
+
+			// Now, "open_pos" is the position of "(" in "( <space> not"
+			// "close_pos" is the first ")" after the above "("
+
+			// Find the next ")" AFTER the above close parenthesis, i.e the last ")" in "( <space> not ... ) <space> )"
+			close_pos = action_string.find_first_of(CLOSE, close_pos + 1);
+			close_pos++;
+
+			// Now record this delete effect, including the two parenthesis
+			string del = action_string.substr(open_pos, close_pos - open_pos);
+			dels.push_back(del);
+
+			// Now move to the position AFTER the ")" of the "(not... (..)"
+			open_pos = close_pos;
+		}
+		else {
 			close_pos++;
 
 			// Now record this add effect, including the two parenthesis
@@ -115,27 +131,6 @@ void extract_effect_strings(string action_string, vector<string>& adds, vector<s
 
 			// Move to the next effect
 			open_pos = close_pos;
-		}
-		else {
-			// Pass the "not"
-			open_pos += not_str.length();
-
-			// Find the position of the "(" for the this DELETE effect
-			open_pos = action_string.find_first_of(OPEN, open_pos);
-
-			// Find the position AFTER the ")" for this delete effect
-			size_t close_pos = action_string.find_first_of(CLOSE, open_pos);
-			assert(close_pos != string::npos);
-			close_pos++;
-
-			// Now record this add effect, including the two parenthesis
-			string del = action_string.substr(open_pos, close_pos - open_pos);
-			dels.push_back(del);
-
-			// Now move to the position AFTER the "(" of the "(not...)
-			open_pos = action_string.find_first_of(CLOSE, close_pos);
-			assert(open_pos != string::npos);
-			open_pos++;
 		}
 	}
 
