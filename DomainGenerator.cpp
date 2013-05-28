@@ -5,199 +5,32 @@
 // Copyright   : Your copyright notice
 // Description : Hello World in C, Ansi-style
 //============================================================================
-#include <vector>
-#include <string>
-#include <fstream>
-#include <iostream>
-#include <cassert>
-#include <ctime>
-#include <algorithm>
-#include <boost/random/uniform_int_distribution.hpp>
-#include <boost/random/mersenne_twister.hpp>
-
+#include "DomainGenerator.h"
+#include <sstream>
 using namespace std;
 
-#define MAX_LEN	 256
-#define TAB		"\t"
-#define OPEN	"("
-#define CLOSE	")"
-#define ACTION_START_STR	":action"
-#define PRECONDITION_START_STR	":precondition"
-#define POSSIBLE_PRECONDITION_START_STR	 ":poss-precondition"
-#define EFFECT_START_STR	":effect"
-#define POSSIBLE_EFFECT_START_STR	":poss-effect"
-#define NOT_STR		"not"
-#define AND_STR		"and"
-
-struct CommandLine {
-	string path;
-	string input_domain;
-	string output_domain;
-
-	size_t num_poss_pres;
-	size_t num_poss_adds;
-	size_t num_poss_dels;
-
-	CommandLine() {
-		path = "./";
-		input_domain = "";
-		output_domain = "";
-		num_poss_adds = 0;
-		num_poss_dels = 0;
-		num_poss_pres = 0;
-	}
-	void print() {
-		cout<<"Path: "<<path<<endl;
-		cout<<"Input: "<<input_domain<<endl;
-		cout<<"Output: "<<output_domain<<endl;
-		cout<<"#Poss pres: "<<num_poss_pres<<endl;
-		cout<<"#Poss adds: "<<num_poss_adds<<endl;
-		cout<<"#Poss dels: "<<num_poss_dels<<endl;
-	}
-};
-
-CommandLine gcmd_line;
-
-// Random generator
-typedef boost::mt19937 base_generator_type;
-base_generator_type generator;
-
-// A structure for actions with separate precondition and effect lists
-struct ActionStruct {
-	size_t id;
-	string before_pre_str;	// String before the ":precondition"
-
-	// Original preconditions, effects
-	vector<string> pres;
-	vector<string> adds;
-	vector<string> dels;
-
-	// Known/possible preconditions, effects
-	vector<string> known_pres;
-	vector<string> known_adds;
-	vector<string> known_dels;
-
-	vector<string> poss_pres;
-	vector<string> poss_adds;
-	vector<string> poss_dels;
-
-	void print() {
-		cout<<"ACTION "<<id<<":"<<endl<<endl;
-		cout<<"before_pre_str: "<<endl<<before_pre_str<<endl<<endl;
-		cout<<"Original preconditions:"<<endl<<endl;
-		for (size_t i=0;i<pres.size();i++) {
-			cout<<pres[i]<<endl;
-		}
-		cout<<endl;
-
-		cout<<"Known preconditions:"<<endl<<endl;
-		for (size_t i=0;i<known_pres.size();i++) {
-			cout<<known_pres[i]<<endl;
-		}
-		cout<<endl;
-
-		cout<<"Possible preconditions:"<<endl<<endl;
-		for (size_t i=0;i<poss_pres.size();i++) {
-			cout<<poss_pres[i]<<endl;
-		}
-		cout<<endl;
-
-		cout<<"Known adds:"<<endl<<endl;
-		for (size_t i=0;i<known_adds.size();i++) {
-			cout<<known_adds[i]<<endl;
-		}
-		cout<<endl;
-
-		cout<<"Possible adds:"<<endl<<endl;
-		for (size_t i=0;i<poss_adds.size();i++) {
-			cout<<poss_adds[i]<<endl;
-		}
-		cout<<endl;
-
-		cout<<"Known deletes:"<<endl<<endl;
-		for (size_t i=0;i<known_dels.size();i++) {
-			cout<<known_dels[i]<<endl;
-		}
-		cout<<endl;
-
-		cout<<"Possible deletes:"<<endl<<endl;
-		for (size_t i=0;i<poss_dels.size();i++) {
-			cout<<poss_dels[i]<<endl;
-		}
-		cout<<endl;
-
-
-	}
-
-};
-
-struct DomainStruct {
-	string before_action_str;	// String before the first "(<space>:action"
-	vector<ActionStruct> action_structures;
-
-	void print() {
-		cout<<"before_action_str:"<<endl<<before_action_str<<endl;
-		for (size_t i=0;i<action_structures.size();i++) {
-			action_structures[i].print();
-			cout<<endl;
-		}
-	}
-};
-
-/**************************************************************************
- * FUNCTIONS
- **************************************************************************/
-
-// Read the entire domain into a string
-string read_domain(string domain_file);
-
-// Extract all action strings
-vector<string> extract_action_strings(string domain_str);
-
-// Extract all precondition strings of from an action string
-vector<string> extract_precondition_strings(string action_string);
-
-// Extract add and delete effect strings from an action string
-void extract_effect_strings(string action_string, vector<string>& adds, vector<string>& dels);
-
-// Command line processing
-bool process_command_line( int argc, char *argv[], CommandLine& cl );
-
-// Make an incomplete action string from an action string
-string make_incomplete_action(const string& action_string, size_t num_poss_pres, size_t num_poss_adds, size_t num_poss_dels);
-
-// Randomly break string array "a" of n elements into two parts "a1" and "a2" with specified size k and n-k
-template<class T>
-void break_arrays(const vector<T>& a, vector<T>& a1, vector<T>& a2, size_t k);
-
-// Randomly select k number from 0 to n-1
-vector<size_t> sample_k(size_t n, size_t k);
-
-// Parse the domain string to put it into structure
-// Return the number of actions
-DomainStruct parse_domain_string(string domain_string);
-
-// Make the domain incomplete
-void make_domain_incomplete(DomainStruct& domain_structure, const CommandLine& cmd);
-
-// Shuffle arrays
-template<class T> void shuffle(vector<T>& a);
-
-// Make domain string from structure
-string make_incomplete_domain_string(const DomainStruct& domain_structure);
-
-/**************************************************************************
- * Main
- **************************************************************************/
 int main(int argc, char *argv[]) {
+
+//#define DEBUG_MAIN
 
 	// Process the command line
 	CommandLine cl;
 	process_command_line(argc, argv, cl);
-	if (cl.input_domain == "" || cl.output_domain == "" || cl.input_domain == cl.output_domain) {
-		cerr<<"Invalid input and/or output domains."<<endl;
+	if (cl.input_domain == "") {
+		cerr<<"Input domain unspecified."<<endl;
 		exit(1);
 	}
+
+	if (cl.num_ouput_domains == 0) {
+		cerr<<"Number of output incomplete domains unspecified."<<endl;
+		exit(1);
+	}
+
+	if (cl.num_poss_pres + cl.num_poss_adds + cl.num_poss_dels == 0) {
+		cerr<<"Number of possible preconditions/effects unspecified."<<endl;
+		exit(1);
+	}
+
 
 	// Set up seed for the generator
 	generator.seed(static_cast<unsigned int>(std::time(0)));		// Initialize seed using the current time
@@ -207,26 +40,69 @@ int main(int argc, char *argv[]) {
 
 	// Parse domain string
 	DomainStruct domain_structure = parse_domain_string(domain_str);
+
+#ifdef DEBUG_MAIN
 	cout<<"=== ORIGINAL DOMAIN ==="<<endl;
 	domain_structure.print();
+#endif
 
-	// Make the domain incomplete
-	make_domain_incomplete(domain_structure, cl);
-	cout<<"=== INCOMPLETE DOMAIN ==="<<endl;
-	domain_structure.print();
+	for (size_t num_poss_pres = 0; num_poss_pres <= cl.num_poss_pres; num_poss_pres++)
+		for (size_t num_poss_adds = 0; num_poss_adds <= cl.num_poss_adds; num_poss_adds++)
+			for (size_t num_poss_dels = 0; num_poss_dels <= cl.num_poss_dels; num_poss_dels++) {
 
-	// Get the whole incomplete domain in string, and write it to output file
-	string incomplete_domain_str = make_incomplete_domain_string(domain_structure);
+				if (num_poss_pres + num_poss_adds + num_poss_dels == 0)
+					continue;
 
-	string filename = cl.path + cl.output_domain;
-	ofstream f(filename.c_str());
-	f<<incomplete_domain_str;
-	f.close();
+				for (size_t i = 0; i < cl.num_ouput_domains; i++) {
+
+					DomainStruct output_domain_structure = domain_structure;
+					// Make the domain incomplete
+					make_domain_incomplete(output_domain_structure, num_poss_pres, num_poss_adds, num_poss_dels);
+
+#ifdef DEBUG_MAIN
+					cout<<"=== INCOMPLETE DOMAIN ==="<<endl;
+					domain_structure.print();
+#endif
+
+					// Get the whole incomplete domain in string, and write it to output file
+					string incomplete_domain_str = make_incomplete_domain_string(output_domain_structure);
+
+					// Write the incomplete domain
+					stringstream ss;
+					ss<<num_poss_pres<<"p_"<<num_poss_adds<<"a_"<<num_poss_dels<<"d."<<i;
+					string output = cl.input_domain + "." + ss.str();
+
+					string filename = cl.path + output;
+					ofstream f(filename.c_str());
+					f<<incomplete_domain_str;
+					f.close();
+				}
+			}
 }
 
 /**************************************************************************
  * FUNCTION DEFINITONS
  **************************************************************************/
+
+void trim_extra_spaces(string& s) {
+
+	// Trim extra spaces between tokens
+	size_t i = 0;
+	while (i < s.size()) {
+		if (s[i] == SPACE) {
+			while (i + 1 < s.size() && s[i+1] == SPACE)
+				s.erase(i+1, 1);
+		}
+		i++;
+	}
+
+	// Trim spaces at the left and right ends
+	while (s.size() && s[0] == SPACE)
+		s.erase(0, 1);
+
+	while (s.size() && s[s.size()-1] == SPACE)
+		s.erase(s.size()-1, 1);
+}
 
 string make_incomplete_domain_string(const DomainStruct& domain_structure) {
 	string result;
@@ -316,7 +192,9 @@ template<class T> void shuffle(vector<T>& a) {
 	}
 }
 
-void make_domain_incomplete(DomainStruct& domain_structure, const CommandLine& cmd) {
+void make_domain_incomplete(DomainStruct& domain_structure, int num_poss_pres, int num_poss_adds, int num_poss_dels) {
+
+//#define DEBUG_MAKE_DOMAIN_INCOMPLE
 
 	// All preconditions and effects of actions, associated with actions' id
 	vector<pair<size_t, string> > all_pres, all_adds, all_dels;
@@ -324,15 +202,15 @@ void make_domain_incomplete(DomainStruct& domain_structure, const CommandLine& c
 
 		const ActionStruct& a = domain_structure.action_structures[i];
 
-		for (size_t j = 0; j < a.pres.size(); j++)
+		for (size_t j = 0; j < a.pres.size(); j++) {
 			all_pres.push_back(make_pair(a.id, a.pres[j]));
+		}
 
 		for (size_t j = 0; j < a.adds.size(); j++)
 			all_adds.push_back(make_pair(a.id, a.adds[j]));
 
 		for (size_t j = 0; j < a.dels.size(); j++)
 			all_dels.push_back(make_pair(a.id, a.dels[j]));
-
 	}
 
 	// Shuffle them all
@@ -342,13 +220,13 @@ void make_domain_incomplete(DomainStruct& domain_structure, const CommandLine& c
 
 	// Now randomly choose possible preconditions and effects
 	vector<pair<size_t, string> > known_pres, poss_pres;
-	break_arrays(all_pres, poss_pres, known_pres, cmd.num_poss_pres);
+	break_arrays(all_pres, poss_pres, known_pres, num_poss_pres);
 
 	vector<pair<size_t, string> > known_adds, poss_adds;
-	break_arrays(all_adds, poss_adds, known_adds, cmd.num_poss_adds);
+	break_arrays(all_adds, poss_adds, known_adds, num_poss_adds);
 
 	vector<pair<size_t, string> > known_dels, poss_dels;
-	break_arrays(all_dels, poss_dels, known_dels, cmd.num_poss_dels);
+	break_arrays(all_dels, poss_dels, known_dels, num_poss_dels);
 
 	// Put back these known and possible preconditions and effects back into the domain structure
 	for (size_t i=0;i<domain_structure.action_structures.size(); i++) {
@@ -396,7 +274,128 @@ void make_domain_incomplete(DomainStruct& domain_structure, const CommandLine& c
 			if (id == a.id)
 				a.poss_dels.push_back(del);
 		}
+
+#ifdef DEBUG_MAKE_DOMAIN_INCOMPLE
+		assert(a.poss_pres.size() + a.known_pres.size() == a.pres.size());
+		assert(a.poss_adds.size() + a.known_adds.size() == a.adds.size());
+		assert(a.poss_dels.size() + a.known_dels.size() == a.dels.size());
+#endif
+
 	}
+
+#ifdef DEBUG_MAKE_DOMAIN_INCOMPLE
+	size_t num_poss_pres = 0;
+	size_t num_poss_adds = 0;
+	size_t num_poss_dels = 0;
+
+	for (size_t i=0;i<domain_structure.action_structures.size(); i++) {
+		const ActionStruct& a = domain_structure.action_structures[i];
+		num_poss_pres += a.poss_pres.size();
+		num_poss_adds += a.poss_adds.size();
+		num_poss_dels += a.poss_dels.size();
+	}
+
+	assert(num_poss_pres == cmd.num_poss_pres);
+	assert(num_poss_adds == cmd.num_poss_adds);
+	assert(num_poss_dels == cmd.num_poss_dels);
+#endif
+
+	// Now mix up the possible preconditions with delete effects not in preconditions,
+	// and the possible delete effects with preconditions not in delete list
+	// Those possible preconditions and delete effects that are "withdrawn" will be
+	// put back into the known list
+	boost::random::uniform_int_distribution<size_t> int_dist;
+	for (size_t i=0;i<domain_structure.action_structures.size(); i++) {
+		ActionStruct& a = domain_structure.action_structures[i];
+
+		//
+		// Possible preconditions and delete effects not in preconditions
+		//
+		if (a.poss_pres.size() && a.dels_minus_pres.size()) {
+
+			shuffle(a.dels_minus_pres);
+
+			// The number to be swapped
+			size_t min_sz = (a.poss_pres.size() < a.dels_minus_pres.size()) ? a.poss_pres.size() : a.dels_minus_pres.size();
+			size_t n = int_dist(generator, boost::random::uniform_int_distribution<size_t>::param_type(0, min_sz));
+
+			// Choose n elements from the two lists to swap
+			vector<size_t> l1 = sample_k(a.poss_pres.size(), n);
+			vector<size_t> l2= sample_k(a.dels_minus_pres.size(), n);
+
+			// Replace possible precondition j-th with the delete effect j-th
+			// And put it back to the known precondition list
+			for (size_t j=0;j<n;j++) {
+				size_t pos1 = l1[j];	// a.poss_pres[pos1] is to be replaced
+				size_t pos2 = l2[j];	// with a.dels_minus_pres[pos2]
+
+				// The delete effect "(not (...) )" to be used instead
+				string del_eff = a.dels_minus_pres[pos2];
+
+				// Remove "(<space> not.."
+				size_t begin_pos = del_eff.find_first_of(OPEN);
+				begin_pos = del_eff.find_first_of(OPEN, begin_pos + 1);
+
+				size_t end_pos = del_eff.find_first_of(CLOSE, begin_pos);
+				end_pos++;
+
+				// Put back the possible precondition into the known precondition list
+				a.known_pres.push_back(a.poss_pres[pos1]);
+
+				// Replace this possible precondition with the delete effect
+				a.poss_pres[pos1] = del_eff.substr(begin_pos, end_pos - begin_pos);
+			}
+		}
+
+		//
+		// Possible delete effects and preconditions not in delete list
+		//
+		if (a.poss_dels.size() && a.pres_minus_dels.size()) {
+			shuffle(a.pres_minus_dels);
+
+			// The number to be swapped
+			size_t min_sz = (a.poss_dels.size() < a.pres_minus_dels.size()) ? a.poss_dels.size() : a.pres_minus_dels.size();
+			size_t n = int_dist(generator, boost::random::uniform_int_distribution<size_t>::param_type(0, min_sz));
+
+			// Choose n elements from the two lists to swap
+			vector<size_t> l1 = sample_k(a.poss_dels.size(), n);
+			vector<size_t> l2= sample_k(a.pres_minus_dels.size(), n);
+
+			// Replace possible delete effect j-th with the precondition j-th
+			// And put it back to the known delete list
+			for (size_t j=0;j<n;j++) {
+				size_t pos1 = l1[j];
+				size_t pos2 = l2[j];
+
+				// The new possible delete to be used
+				string new_poss_eff = string("(not ") + a.pres_minus_dels[pos2] + string(")");
+
+				// Put back the possible delete into the known delete list
+				a.known_dels.push_back(a.poss_dels[pos1]);
+
+				// Replace this possible delete with the new one
+				a.poss_dels[pos1] = new_poss_eff;
+			}
+		}
+	}
+
+#ifdef DEBUG_MAKE_DOMAIN_INCOMPLE
+	num_poss_pres = 0;
+	num_poss_adds = 0;
+	num_poss_dels = 0;
+
+	for (size_t i=0;i<domain_structure.action_structures.size(); i++) {
+		const ActionStruct& a = domain_structure.action_structures[i];
+		num_poss_pres += a.poss_pres.size();
+		num_poss_adds += a.poss_adds.size();
+		num_poss_dels += a.poss_dels.size();
+	}
+
+	assert(num_poss_pres == cmd.num_poss_pres);
+	assert(num_poss_adds == cmd.num_poss_adds);
+	assert(num_poss_dels == cmd.num_poss_dels);
+#endif
+
 }
 
 DomainStruct parse_domain_string(string domain_string) {
@@ -428,6 +427,10 @@ DomainStruct parse_domain_string(string domain_string) {
 		a.pres = extract_precondition_strings(action_strings[i]);
 		extract_effect_strings(action_strings[i], a.adds, a.dels);
 
+		// Extract preconditions not in delete list and vice versa
+		extract_preconditions_minus_deletes(a.pres, a.dels, a.pres_minus_dels);
+		extract_deletes_minus_preconditions(a.pres, a.dels, a.dels_minus_pres);
+
 		// Store this action structure
 		action_structures.push_back(a);
 	}
@@ -439,15 +442,25 @@ DomainStruct parse_domain_string(string domain_string) {
 }
 
 vector<size_t> sample_k(size_t n, size_t k) {
-	assert(k > 0 && k < n);
+	assert(k >= 0 && k <= n);
+
+	// The resulting numbers
+	vector<size_t> result;
+
+	if (k == 0)
+		return result;
+
+	if (k == n) {
+		for (size_t i=0;i<n;i++)
+			result.push_back(i);
+		return result;
+	}
+
 
 	// Array of numbers [0..n-1]
 	vector<size_t> a(n);
 	for (size_t i=0;i<n;i++)
 		a[i] = i;
-
-	// The resulting numbers
-	vector<size_t> result;
 
 	// Start to select
 	boost::random::uniform_int_distribution<size_t> int_dist;
@@ -499,6 +512,11 @@ string make_incomplete_action(const string& action_string, size_t num_poss_pres,
 	vector<string> preconditions = extract_precondition_strings(action_string);
 	vector<string> add_effects, delete_effects;
 	extract_effect_strings(action_string, add_effects, delete_effects);
+
+	// Extract preconditions not in delete list, and vice versa
+	vector<string> pres_minus_dels, dels_minus_pres;
+	extract_preconditions_minus_deletes(preconditions, delete_effects, pres_minus_dels);
+	extract_deletes_minus_preconditions(preconditions, delete_effects, dels_minus_pres);
 
 	// Break precondition and effect strings into known and possible parts
 	vector<string> known_preconditions, possible_preconditions;
@@ -570,6 +588,28 @@ string make_incomplete_action(const string& action_string, size_t num_poss_pres,
 }
 
 
+void extract_preconditions_minus_deletes(const vector<string>& pres, const vector<string>& dels, vector<string>& pres_minus_dels) {
+	for (size_t i = 0; i < pres.size(); i++) {
+		string s = string("(not ") + pres[i] + ")";
+		if (find(dels.begin(), dels.end(), s) == dels.end())
+			pres_minus_dels.push_back(pres[i]);
+	}
+}
+
+void extract_deletes_minus_preconditions(const vector<string>& pres, const vector<string>& dels, vector<string>& dels_minus_pres) {
+	for (size_t i=0;i<dels.size();i++) {
+		size_t j = 0;
+		for (; j < pres.size();j++) {
+			string s = string("(not ") + pres[i] + ")";
+			if (dels[i] == s)
+				break;
+		}
+
+		if (j == pres.size())
+			dels_minus_pres.push_back(dels[i]);
+	}
+}
+
 bool process_command_line( int argc, char *argv[], CommandLine& cl) {
 
 	while ( --argc && ++argv ) {
@@ -588,9 +628,9 @@ bool process_command_line( int argc, char *argv[], CommandLine& cl) {
 			if (option == "-i")
 				cl.input_domain = *argv;
 
-			// Output domain
-			if (option == "-o")
-				cl.output_domain = *argv;
+			// Number of output domains
+			if (option == "-n")
+				sscanf(*argv,"%d", &cl.num_ouput_domains);
 
 			// Number of possible preconditions
 			if (option == "-p")
@@ -646,6 +686,8 @@ void extract_effect_strings(string action_string, vector<string>& adds, vector<s
 		// Check if this is an add or delete effect
 		if (not_pos != string::npos && not_pos < close_pos) {
 
+			// Delete effect!
+
 			// Now, "open_pos" is the position of "(" in "( <space> not"
 			// "close_pos" is the first ")" after the above "("
 
@@ -661,6 +703,9 @@ void extract_effect_strings(string action_string, vector<string>& adds, vector<s
 			open_pos = close_pos;
 		}
 		else {
+
+			// Add effect!
+
 			close_pos++;
 
 			// Now record this add effect, including the two parenthesis

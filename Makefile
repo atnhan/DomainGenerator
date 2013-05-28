@@ -10,6 +10,7 @@ TARGET =	DomainGenerator
 
 $(TARGET):	$(OBJS)
 	$(CXX) -o $(TARGET) $(OBJS) $(LIBS)
+	cp DomainGenerator ../Robust-FF/benchmark
 
 all:	$(TARGET)
 
